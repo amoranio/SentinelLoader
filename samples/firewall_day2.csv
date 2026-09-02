@@ -1,0 +1,9 @@
+timestamp,src_ip,dst_ip,src_port,dst_port,action,bytes,protocol,device,rule
+2026-08-13T02:11:09Z,10.0.4.12,1.1.1.1,51100,53,allow,96,udp,fw-edge-01,dns-out
+2026-08-13T02:11:14Z,10.0.7.21,10.0.8.14,49822,445,deny,0,tcp,fw-east-02,smb-lat
+2026-08-13T02:12:33Z,10.0.4.55,13.107.42.14,62311,443,allow,22100,tcp,fw-edge-01,web-out
+2026-08-13T02:13:01Z,45.155.205.11,10.0.4.80,40001,22,deny,40,tcp,fw-edge-01,mgmt-in
+2026-08-13T02:13:02Z,45.155.205.11,10.0.4.80,40002,22,deny,40,tcp,fw-edge-01,mgmt-in
+2026-08-13T02:13:03Z,45.155.205.11,10.0.4.80,40003,22,deny,40,tcp,fw-edge-01,mgmt-in
+2026-08-13T02:14:44Z,10.0.4.12,8.8.4.4,51104,53,allow,128,udp,fw-edge-01,dns-out
+2026-08-13T02:15:10Z,10.0.5.9,10.0.9.4,443,443,allow,8800,tcp,fw-east-02,app-int

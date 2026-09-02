@@ -1,0 +1,6 @@
+{"EventTime":"2026-08-12T18:01:11Z","User":"ada@contoso.com","Result":"success","SourceIP":"10.0.4.12","App":"AzurePortal","MFA":true}
+{"EventTime":"2026-08-12T18:04:02Z","User":"linus@contoso.com","Result":"failure","SourceIP":"198.51.100.9","App":"Exchange","MFA":false}
+{"EventTime":"2026-08-12T18:04:18Z","User":"linus@contoso.com","Result":"failure","SourceIP":"198.51.100.9","App":"Exchange","MFA":false}
+{"EventTime":"2026-08-12T18:04:40Z","User":"linus@contoso.com","Result":"failure","SourceIP":"198.51.100.9","App":"Exchange","MFA":false}
+{"EventTime":"2026-08-12T18:05:01Z","User":"linus@contoso.com","Result":"success","SourceIP":"10.0.4.88","App":"Exchange","MFA":true}
+{"EventTime":"2026-08-12T19:12:44Z","User":"grace@contoso.com","Result":"success","SourceIP":"10.0.5.20","App":"VPN","MFA":true}

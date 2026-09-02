@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[project]
+name = "sentinel-loader"
+version = "1.0.0"
+description = "Bulk-parse CSV/JSON logs and ingest them into Microsoft Sentinel."
+readme = "README.md"
+requires-python = ">=3.11"
