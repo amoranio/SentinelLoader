@@ -33,6 +33,7 @@ def test_demo_preview_and_dry_run():
     assert body["sample_records"]
     assert "TimeGenerated" in body["sample_records"][0]
     assert "can_create_table" in body
+    assert any(i["code"] == "schema_union" for i in body["issues"])
     assert "custom table must exist" in body["table_callout"].lower() or "Logs Ingestion API" in body["table_callout"]
 
     ingest = client.post(

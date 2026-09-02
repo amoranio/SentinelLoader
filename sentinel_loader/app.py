@@ -27,15 +27,15 @@ def create_app() -> FastAPI:
 
     @app.get("/")
     def index() -> FileResponse:
-        return FileResponse(STATIC_DIR / "index.html")
+        return FileResponse(STATIC_DIR / "index.html", headers={"Cache-Control": "no-store"})
 
     @app.get("/styles.css")
     def styles() -> FileResponse:
-        return FileResponse(STATIC_DIR / "styles.css")
+        return FileResponse(STATIC_DIR / "styles.css", headers={"Cache-Control": "no-store"})
 
     @app.get("/app.js")
     def script() -> FileResponse:
-        return FileResponse(STATIC_DIR / "app.js")
+        return FileResponse(STATIC_DIR / "app.js", headers={"Cache-Control": "no-store"})
 
     return app
 

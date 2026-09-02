@@ -323,6 +323,21 @@ def preview(request: Request, payload: MappingPayload) -> PreviewResult:
 
     issues = list(mapping_issues(payload.columns))
     issues.extend(preview_issues(payload.columns, payload.time_generated, row_count))
+    schemas = {tuple(c.sentinel_name for c in stored.summary.columns) for stored in state.files.values() if stored.summary}
+    if len(schemas) > 1:
+        issues.append(
+            Issue(
+                severity="warning",
+                code="schema_union",
+                message=(
+                    "These files do not share the same columns. SentinelLoader will union the "
+                    "schemas into one table; missing fields on a given row are omitted."
+                ),
+            )
+        )
+    for stored in state.files.values():
+        if stored.summary:
+            issues.extend(stored.summary.issues)
     schema = build_table_schema(table, payload.columns, state.transform)
     stream_decl = build_dcr_stream_declaration(table, payload.columns, state.transform)
     return PreviewResult(

@@ -49,15 +49,19 @@ function formConnection() {
 }
 
 function mappingPayload() {
-  const columns = [...$("#schemaTable tbody tr")].map((tr) => ({
-    original_name: tr.dataset.original,
-    sentinel_name: tr.querySelector(".sentinel-name").value.trim(),
-    type: tr.querySelector(".col-type").value,
-    include: tr.querySelector(".include").checked,
-    sample_values: JSON.parse(tr.dataset.samples || "[]"),
-    renamed: tr.dataset.renamed === "true",
-    rename_reason: tr.dataset.reason || null,
-  }));
+  const columns = $$("#schemaTable tbody tr").map((tr) => {
+    let samples = [];
+    try { samples = JSON.parse(tr.dataset.samples || "[]"); } catch { samples = []; }
+    return {
+      original_name: tr.dataset.original,
+      sentinel_name: tr.querySelector(".sentinel-name").value.trim(),
+      type: tr.querySelector(".col-type").value,
+      include: tr.querySelector(".include").checked,
+      sample_values: samples,
+      renamed: tr.dataset.renamed === "true",
+      rename_reason: tr.dataset.reason || null,
+    };
+  });
   return {
     columns,
     time_generated: {
@@ -214,23 +218,24 @@ async function ingest() {
   }
   $("#ingestBtn").disabled = true;
   showStatus($("#ingestStatus"), dry ? "Running dry run…" : "Provisioning / ingesting… this can take a minute if the table is being created.");
-  const destination = {
-    mode: destMode,
-    table_name: mappingPayload().table_name,
-    table_plan: "Analytics",
-    dry_run: dry,
-    existing: destMode === "existing" ? {
-      table_name: $("#existingTable").value.trim(),
-      dcr_immutable_id: $("#existingDcr").value.trim(),
-      ingestion_endpoint: $("#existingEndpoint").value.trim(),
-      stream_name: $("#existingStream").value.trim(),
-    } : null,
-  };
   try {
+    const mapping = mappingPayload();
+    const destination = {
+      mode: destMode,
+      table_name: mapping.table_name,
+      table_plan: "Analytics",
+      dry_run: dry,
+      existing: destMode === "existing" ? {
+        table_name: $("#existingTable").value.trim(),
+        dcr_immutable_id: $("#existingDcr").value.trim(),
+        ingestion_endpoint: $("#existingEndpoint").value.trim(),
+        stream_name: $("#existingStream").value.trim(),
+      } : null,
+    };
     const result = await api("/api/ingest", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mapping: mappingPayload(), destination }),
+      body: JSON.stringify({ mapping, destination }),
     });
     const files = (result.files || []).map((f) => `${f.file_name}: ${f.status} (${f.rows_sent}/${f.rows_total}${f.error ? ` — ${f.error}` : ""})`).join("\n");
     const msgs = [...(result.messages || []), ...(result.warnings || [])].join("\n");
@@ -379,6 +384,6 @@ $("#demoBtn").addEventListener("click", async () => {
     go(3);
     await refreshPreview();
   } catch (err) {
-    showStatus($("#connectStatus"), err.message, "error");
+    showStatus($("#previewStatus") || $("#connectStatus"), err.message, "error");
   }
 });
