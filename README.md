@@ -8,14 +8,26 @@ Microsoft Sentinel has no “upload CSV” button. This app is that button: dete
 
 **The table must exist before any row can be ingested.** The Logs Ingestion API will not invent a table at upload time.
 
-**SentinelLoader can create it for you.** On the last step choose **Create the custom table and DCR**. The app will:
+**SentinelLoader can create it for you.** On Connect choose **App creates the table**, then on Send keep **Create the custom table and DCR**. The app will:
 
 1. Create a custom Log Analytics table named `{YourName}_CL` with the schema you approved in the preview
 2. Create a **Direct** Data Collection Rule (DCR) whose stream matches that schema
 3. Grant this identity **Monitoring Metrics Publisher** on the DCR (needed to POST logs)
 4. Upload the parsed records in 1 MB chunks (gzip)
 
-If you already created the table in the Azure portal (Log Analytics workspace → Tables → New custom log), choose **Use a table that already exists** and paste the DCR immutable ID, stream name, and logs ingestion endpoint.
+### Create the table yourself (then only paste details in the app)
+
+Use this when you want Azure to own the table, or the app identity cannot create resources.
+
+1. In SentinelLoader, choose **Preview only**, parse your files, and on Validate click **Download sample JSON for Azure portal**.
+2. Azure portal → Log Analytics workspace (the one behind Sentinel) → **Tables** → **Create** → **New custom log (DCR-based)**. Name it; the portal adds `_CL`.
+3. Create a DCR in the same region. If asked, attach a Data Collection Endpoint in that region.
+4. Upload the sample JSON. Map or add `TimeGenerated`.
+5. On the DCR: **Access control (IAM)** → **Monitoring Metrics Publisher** → assign your Entra app registration.
+6. Copy from the DCR: **Immutable Id**, JSON `properties.logsIngestion.endpoint`, and the `streamDeclarations` key (usually `Custom-YourTable`).
+7. In the app: Connect with tenant / client / secret / subscription / RG / workspace. On Send, choose **Use a table I already created** and paste those three DCR values.
+
+The in-app **Setup guide** repeats this with portal click-paths.
 
 ### Permissions
 

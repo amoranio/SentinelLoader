@@ -3,256 +3,401 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SentinelLoader — bulk logs into Microsoft Sentinel</title>
+  <title>SentinelLoader</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <div class="app">
-    <header class="top">
-      <div class="brand">
-        <span class="mark" aria-hidden="true"></span>
-        <div>
-          <h1>SentinelLoader</h1>
-          <p>Parse bulk CSV / JSON logs, check the shape, send them to Microsoft Sentinel</p>
-        </div>
-      </div>
-      <div class="top-actions">
-        <button type="button" class="ghost" id="demoBtn">Load sample logs</button>
-        <button type="button" class="ghost" id="resetBtn">Reset session</button>
-      </div>
-    </header>
+  <header class="mast">
+    <a class="wordmark" href="/" aria-label="SentinelLoader home">SentinelLoader</a>
+    <nav class="mast-nav">
+      <button type="button" class="btn-text" id="guideBtn">Setup guide</button>
+      <button type="button" class="btn-text" id="demoBtn">Sample logs</button>
+      <button type="button" class="btn-text" id="resetBtn">Reset</button>
+    </nav>
+  </header>
 
-    <ol class="steps" id="steps">
-      <li class="active" data-step="1"><span>1</span> Connect</li>
-      <li data-step="2"><span>2</span> Files</li>
-      <li data-step="3"><span>3</span> Validate</li>
-      <li data-step="4"><span>4</span> Send</li>
-    </ol>
+  <nav class="progress" id="steps" aria-label="Workflow">
+    <button type="button" class="active" data-step="1">
+      <span class="idx">01</span>
+      Connect
+    </button>
+    <button type="button" data-step="2">
+      <span class="idx">02</span>
+      Files
+    </button>
+    <button type="button" data-step="3">
+      <span class="idx">03</span>
+      Validate
+    </button>
+    <button type="button" data-step="4">
+      <span class="idx">04</span>
+      Send
+    </button>
+  </nav>
 
-    <main>
-      <section class="panel" id="step-1">
-        <div class="panel-head">
-          <h2>Azure connection</h2>
-          <p>
-            Sentinel stores custom logs in a Log Analytics workspace. You can preview parsing without Azure.
-            Sending data needs a workspace and an identity that can ingest (and, if you want the app to create the table, manage tables and DCRs).
-          </p>
-        </div>
+  <main class="stage">
+    <section class="panel" id="step-1">
+      <header class="stage-head">
+        <p class="kicker">01 — Connect</p>
+        <h2>Point this machine at Sentinel.</h2>
+        <p class="lede">
+          Custom logs land in a Log Analytics table. You can parse files with no Azure account,
+          let this app create the table, or finish Azure yourself and only paste credentials here.
+        </p>
+      </header>
 
-        <aside class="callout brass">
-          <strong>Do you need to create a table first?</strong>
-          <p>
-            Yes — the Logs Ingestion API will not accept rows for a table that does not exist.
-            <em>SentinelLoader can create that table for you</em> (a custom <code>_CL</code> table plus a Direct Data Collection Rule).
-            If you would rather create it in the portal, use “existing table” on the last step.
-          </p>
-        </aside>
-
-        <form id="connectForm" class="grid-2">
-          <label>Auth
-            <select name="auth_mode">
-              <option value="service_principal">Service principal (client secret)</option>
-              <option value="default">Azure CLI / DefaultAzureCredential</option>
-            </select>
-          </label>
-          <label>Cloud
-            <select name="cloud">
-              <option value="public">Azure public</option>
-              <option value="usgovernment">Azure US Government</option>
-              <option value="china">Azure China</option>
-            </select>
-          </label>
-          <label>Tenant ID
-            <input name="tenant_id" placeholder="00000000-0000-0000-0000-000000000000" autocomplete="off" />
-          </label>
-          <label>Subscription ID
-            <input name="subscription_id" placeholder="00000000-0000-0000-0000-000000000000" autocomplete="off" />
-          </label>
-          <label class="sp-only">Client ID
-            <input name="client_id" autocomplete="off" />
-          </label>
-          <label class="sp-only">Client secret
-            <input name="client_secret" type="password" autocomplete="off" />
-          </label>
-          <label>Resource group
-            <input name="resource_group" placeholder="rg-soc" />
-          </label>
-          <label>Log Analytics workspace
-            <input name="workspace_name" placeholder="law-sentinel" />
-          </label>
-        </form>
-
-        <div class="perm-grid">
-          <article>
-            <h3>To create the table (optional)</h3>
-            <ul>
-              <li>Log Analytics Contributor on the workspace</li>
-              <li>Monitoring Contributor on the resource group (creates the DCR)</li>
-              <li>User Access Administrator on the DCR/RG (grants Monitoring Metrics Publisher to this identity)</li>
-            </ul>
-          </article>
-          <article>
-            <h3>To ingest only</h3>
-            <ul>
-              <li>Table and Direct DCR already exist</li>
-              <li>Monitoring Metrics Publisher on that DCR</li>
-              <li>You will paste the DCR immutable ID, stream name, and ingestion endpoint</li>
-            </ul>
-          </article>
-        </div>
-
-        <p class="status" id="connectStatus"></p>
-        <div class="actions">
-          <button type="button" class="ghost" id="skipAzureBtn">Continue without Azure — preview &amp; dry run</button>
-          <button type="button" class="primary" id="testConnectBtn">Save &amp; test connection</button>
-        </div>
-        <div id="workspaceMeta" class="meta-block hidden"></div>
-      </section>
-
-      <section class="panel hidden" id="step-2">
-        <div class="panel-head">
-          <h2>Bulk upload</h2>
-          <p>Drop CSV, TSV, JSON, or JSONL files. Encoding and delimiter are detected; you can override after parse if a file looks wrong.</p>
-        </div>
-        <label class="drop" id="dropZone">
-          <input type="file" id="fileInput" multiple accept=".csv,.tsv,.txt,.log,.json,.jsonl,.ndjson" />
-          <strong>Drop files here</strong>
-          <span>or click to browse — multiple files are ingested into one table</span>
+      <div class="path-grid" role="radiogroup" aria-label="How you want to set up">
+        <label class="path-card">
+          <input type="radio" name="setupPath" value="preview" />
+          <span>
+            <strong>Preview only</strong>
+            Parse files and inspect the Sentinel shape. Nothing is written to Azure.
+          </span>
         </label>
-        <div class="file-toolbar">
-          <label>Delimiter override
-            <input id="optDelimiter" placeholder="auto (, ; tab |)" />
-          </label>
-          <label>Encoding
-            <input id="optEncoding" placeholder="auto" />
-          </label>
-          <label>Header row
-            <select id="optHeader">
-              <option value="">auto</option>
-              <option value="true">has header</option>
-              <option value="false">no header</option>
-            </select>
-          </label>
-        </div>
-        <ul class="file-list" id="fileList"></ul>
-        <p class="status" id="uploadStatus"></p>
-        <div class="actions">
-          <button type="button" class="ghost" data-back="1">Back</button>
-          <button type="button" class="primary" id="parseBtn">Parse files</button>
-        </div>
-      </section>
+        <label class="path-card">
+          <input type="radio" name="setupPath" value="create" checked />
+          <span>
+            <strong>App creates the table</strong>
+            You supply a workspace identity. SentinelLoader creates <code>_CL</code> + a Direct DCR, then uploads.
+          </span>
+        </label>
+        <label class="path-card">
+          <input type="radio" name="setupPath" value="existing" />
+          <span>
+            <strong>I created the table in Azure</strong>
+            You already ran the portal wizard. This app only needs credentials and DCR details.
+          </span>
+        </label>
+      </div>
 
-      <section class="panel hidden" id="step-3">
-        <div class="panel-head">
-          <h2>Validate parsing</h2>
-          <p>This is what Sentinel will store. Rename types, map <code>TimeGenerated</code>, and confirm a few rows before anything is sent.</p>
-        </div>
-        <div id="issueList" class="issues"></div>
-        <div class="split">
-          <div>
-            <div class="inline-fields">
-              <label>Table name (suffix <code>_CL</code> is added)
-                <input id="tableName" />
-              </label>
-              <label>TimeGenerated
-                <select id="timeMode">
-                  <option value="column">From a column (recommended)</option>
-                  <option value="ingest_time">Upload time (now)</option>
-                  <option value="file_mtime">File last-modified time</option>
-                </select>
-              </label>
-              <label id="timeColumnWrap">Timestamp column
-                <select id="timeColumn"></select>
-              </label>
-            </div>
-            <label class="check"><input type="checkbox" id="addSourceFile" checked /> Add <code>SourceFile</code> so bulk uploads stay distinguishable</label>
-            <div class="table-wrap">
-              <table class="grid" id="schemaTable">
-                <thead>
-                  <tr>
-                    <th></th>
-                    <th>CSV column</th>
-                    <th>Sentinel column</th>
-                    <th>Type</th>
-                    <th>Examples</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-          <div class="preview-card">
-            <div class="tabs" id="previewTabs">
-              <button type="button" class="active" data-tab="table">Table rows</button>
-              <button type="button" data-tab="json">API payload</button>
-              <button type="button" data-tab="kql">KQL after ingest</button>
-              <button type="button" data-tab="schema">Table schema</button>
-            </div>
-            <div class="tab-body" id="previewTable"></div>
-            <pre class="tab-body hidden" id="previewJson"></pre>
-            <pre class="tab-body hidden" id="previewKql"></pre>
-            <pre class="tab-body hidden" id="previewSchema"></pre>
+      <p class="path-note" id="pathNote"></p>
+
+      <form id="connectForm" class="form-block">
+        <div class="form-section" id="azureFields">
+          <h3>Identity</h3>
+          <p class="section-help">A service principal is the usual choice. Use Azure CLI only if this app runs on a machine where you have already signed in with <code>az login</code>.</p>
+          <div class="grid-2">
+            <label>Auth method
+              <select name="auth_mode">
+                <option value="service_principal">Service principal (client secret)</option>
+                <option value="default">Azure CLI / DefaultAzureCredential</option>
+              </select>
+              <span class="hint">Entra app registration with a client secret.</span>
+            </label>
+            <label>Cloud
+              <select name="cloud">
+                <option value="public">Azure public</option>
+                <option value="usgovernment">Azure US Government</option>
+                <option value="china">Azure China</option>
+              </select>
+            </label>
+            <label>Tenant ID
+              <input name="tenant_id" placeholder="Directory (tenant) ID" autocomplete="off" spellcheck="false" />
+              <span class="hint">Entra ID → App registration → Overview.</span>
+            </label>
+            <label>Subscription ID
+              <input name="subscription_id" placeholder="Subscription GUID" autocomplete="off" spellcheck="false" />
+              <span class="hint">Subscriptions → your subscription → Overview.</span>
+            </label>
+            <label class="sp-only">Client ID
+              <input name="client_id" placeholder="Application (client) ID" autocomplete="off" spellcheck="false" />
+              <span class="hint">Same Overview page as Tenant ID.</span>
+            </label>
+            <label class="sp-only">Client secret
+              <input name="client_secret" type="password" placeholder="Secret value, not secret ID" autocomplete="off" />
+              <span class="hint">Certificates &amp; secrets → Value. Shown only at creation.</span>
+            </label>
+            <label>Resource group
+              <input name="resource_group" placeholder="rg-soc" autocomplete="off" />
+              <span class="hint">Resource group that holds the Log Analytics workspace.</span>
+            </label>
+            <label>Log Analytics workspace
+              <input name="workspace_name" placeholder="law-sentinel" autocomplete="off" />
+              <span class="hint">The workspace behind Microsoft Sentinel. Not the Sentinel instance name.</span>
+            </label>
           </div>
         </div>
-        <p class="status" id="previewStatus"></p>
-        <div class="actions">
-          <button type="button" class="ghost" data-back="2">Back</button>
-          <button type="button" class="ghost" id="refreshPreviewBtn">Refresh preview</button>
-          <button type="button" class="primary" id="toSendBtn">Looks right — continue</button>
-        </div>
-      </section>
+      </form>
 
-      <section class="panel hidden" id="step-4">
-        <div class="panel-head">
-          <h2>Create table &amp; send</h2>
-          <p>Nothing is written to Sentinel until you confirm. Dry run writes parsed records locally so you can inspect them.</p>
+      <p class="status" id="connectStatus"></p>
+      <div class="actions">
+        <button type="button" class="btn btn-ghost" id="guideBtn2">Open setup guide</button>
+        <button type="button" class="btn btn-ghost" id="skipAzureBtn">Continue without Azure</button>
+        <button type="button" class="btn btn-primary" id="testConnectBtn">Save &amp; test connection</button>
+      </div>
+      <div id="workspaceMeta" class="meta-block hidden"></div>
+    </section>
+
+    <section class="panel hidden" id="step-2">
+      <header class="stage-head">
+        <p class="kicker">02 — Files</p>
+        <h2>Drop the logs.</h2>
+        <p class="lede">CSV, TSV, JSON, or JSONL. Multiple files go to one table. Encoding and delimiter are detected; override only if the preview looks wrong.</p>
+      </header>
+      <label class="drop" id="dropZone">
+        <input type="file" id="fileInput" multiple accept=".csv,.tsv,.txt,.log,.json,.jsonl,.ndjson" />
+        <strong>Drop files here</strong>
+        <span>or click to browse</span>
+      </label>
+      <div class="file-toolbar">
+        <label>Delimiter
+          <input id="optDelimiter" placeholder="auto  ( ,  ;  tab  | )" />
+        </label>
+        <label>Encoding
+          <input id="optEncoding" placeholder="auto" />
+        </label>
+        <label>Header row
+          <select id="optHeader">
+            <option value="">auto</option>
+            <option value="true">has header</option>
+            <option value="false">no header</option>
+          </select>
+        </label>
+      </div>
+      <ul class="file-list" id="fileList"></ul>
+      <p class="status" id="uploadStatus"></p>
+      <div class="actions">
+        <button type="button" class="btn btn-ghost" data-back="1">Back</button>
+        <button type="button" class="btn btn-primary" id="parseBtn">Parse files</button>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="step-3">
+      <header class="stage-head">
+        <p class="kicker">03 — Validate</p>
+        <h2>This is what Sentinel will store.</h2>
+        <p class="lede">
+          Confirm column types and <code>TimeGenerated</code> before anything is sent.
+          If you will create the table in the Azure portal yourself, download the sample JSON from this screen and upload it in the custom-log wizard.
+        </p>
+      </header>
+      <div id="issueList" class="issues"></div>
+      <div class="split">
+        <div>
+          <div class="inline-fields">
+            <label>Table name
+              <input id="tableName" />
+              <span class="hint">Suffix <code>_CL</code> is added automatically.</span>
+            </label>
+            <label>TimeGenerated
+              <select id="timeMode">
+                <option value="column">From a column (recommended)</option>
+                <option value="ingest_time">Upload time (now)</option>
+                <option value="file_mtime">File last-modified time</option>
+              </select>
+              <span class="hint">Every Sentinel table requires this timestamp.</span>
+            </label>
+            <label id="timeColumnWrap">Timestamp column
+              <select id="timeColumn"></select>
+            </label>
+          </div>
+          <label class="check"><input type="checkbox" id="addSourceFile" checked /> Add <code>SourceFile</code> so bulk uploads stay distinguishable</label>
+          <div class="table-wrap">
+            <table class="grid" id="schemaTable">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Source column</th>
+                  <th>Sentinel column</th>
+                  <th>Type</th>
+                  <th>Examples</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
         </div>
-        <aside class="callout sage" id="tableCallout"></aside>
-        <fieldset class="dest-options">
-          <legend>Destination</legend>
-          <label class="choice">
-            <input type="radio" name="destMode" value="create" checked />
-            <span>
-              <strong>Create the custom table and DCR</strong>
-              SentinelLoader will PUT <code id="createTableName">ImportedLogs_CL</code> in the workspace, create a Direct DCR, and try to grant Monitoring Metrics Publisher. You do not need to pre-create the table.
-            </span>
-          </label>
-          <label class="choice">
-            <input type="radio" name="destMode" value="existing" />
-            <span>
-              <strong>Use a table that already exists</strong>
-              The table and DCR must already be in Azure. Paste the DCR immutable ID, stream name, and logs ingestion endpoint.
-            </span>
-          </label>
-        </fieldset>
-        <div id="existingFields" class="grid-2 hidden">
+        <div class="preview-card">
+          <div class="tabs" id="previewTabs">
+            <button type="button" class="active" data-tab="table">Table rows</button>
+            <button type="button" data-tab="json">API payload</button>
+            <button type="button" data-tab="kql">KQL</button>
+            <button type="button" data-tab="schema">Schema</button>
+          </div>
+          <div class="tab-body" id="previewTable"></div>
+          <pre class="tab-body hidden" id="previewJson"></pre>
+          <pre class="tab-body hidden" id="previewKql"></pre>
+          <pre class="tab-body hidden" id="previewSchema"></pre>
+        </div>
+      </div>
+      <p class="status" id="previewStatus"></p>
+      <div class="actions">
+        <button type="button" class="btn btn-ghost" data-back="2">Back</button>
+        <button type="button" class="btn btn-ghost" id="downloadSampleBtn">Download sample JSON for Azure portal</button>
+        <button type="button" class="btn btn-ghost" id="refreshPreviewBtn">Refresh preview</button>
+        <button type="button" class="btn btn-primary" id="toSendBtn">Looks right — continue</button>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="step-4">
+      <header class="stage-head">
+        <p class="kicker">04 — Send</p>
+        <h2>Create the table, or point at one you made.</h2>
+        <p class="lede">Nothing is written to Sentinel until you confirm. Dry run writes parsed records locally.</p>
+      </header>
+      <aside class="callout" id="tableCallout"></aside>
+      <fieldset class="dest-options">
+        <legend>Destination</legend>
+        <label class="choice">
+          <input type="radio" name="destMode" value="create" checked />
+          <span>
+            <strong>Create the custom table and DCR</strong>
+            SentinelLoader will create <code id="createTableName">ImportedLogs_CL</code>, a Direct DCR, and try to grant Monitoring Metrics Publisher. You do not pre-create the table.
+          </span>
+        </label>
+        <label class="choice">
+          <input type="radio" name="destMode" value="existing" />
+          <span>
+            <strong>Use a table I already created</strong>
+            Paste the three DCR values from Azure. Connection credentials are still required to authenticate the upload.
+          </span>
+        </label>
+      </fieldset>
+
+      <div id="existingPanel" class="hidden">
+        <div class="guide-mini">
+          <h3>Where these values come from</h3>
+          <ol>
+            <li>Azure portal → <strong>Monitor</strong> → <strong>Data Collection Rules</strong> → the DCR attached to your custom table.</li>
+            <li><strong>Overview</strong> → copy <em>Immutable Id</em> (<code>dcr-…</code>).</li>
+            <li>On the same blade, <strong>JSON View</strong>. Set API version to a current one if the endpoint is missing. Copy <code>properties.logsIngestion.endpoint</code>.</li>
+            <li>In that JSON, under <code>streamDeclarations</code>, copy the stream key (usually <code>Custom-YourTable</code>, without <code>_CL</code>).</li>
+            <li>Table name is the Log Analytics table, including <code>_CL</code>.</li>
+          </ol>
+          <p>The identity in Connect must have <strong>Monitoring Metrics Publisher</strong> on that DCR. Full portal walkthrough is in the <button type="button" class="inline-link" id="openPortalGuide">setup guide</button>.</p>
+        </div>
+        <div id="existingFields" class="grid-2">
           <label>Table name
-            <input id="existingTable" placeholder="MyLogs_CL" />
+            <input id="existingTable" placeholder="MyLogs_CL" spellcheck="false" />
+            <span class="hint">Must already exist. Custom tables end in <code>_CL</code>.</span>
           </label>
           <label>DCR immutable ID
-            <input id="existingDcr" placeholder="dcr-..." />
+            <input id="existingDcr" placeholder="dcr-…" spellcheck="false" />
+            <span class="hint">DCR → Overview → Immutable Id.</span>
           </label>
-          <label>Ingestion endpoint
-            <input id="existingEndpoint" placeholder="https://....ingest.monitor.azure.com" />
+          <label>Logs ingestion endpoint
+            <input id="existingEndpoint" placeholder="https://….ingest.monitor.azure.com" spellcheck="false" />
+            <span class="hint">DCR JSON → properties.logsIngestion.endpoint</span>
           </label>
           <label>Stream name
-            <input id="existingStream" placeholder="Custom-MyLogs" />
+            <input id="existingStream" placeholder="Custom-MyLogs" spellcheck="false" />
+            <span class="hint">DCR JSON → streamDeclarations key, not the table name.</span>
           </label>
         </div>
-        <div id="workspacePick" class="meta-block hidden"></div>
-        <label class="check"><input type="checkbox" id="dryRun" /> Dry run — parse and write NDJSON locally, do not call Azure</label>
-        <p class="status" id="ingestStatus"></p>
-        <div id="ingestResult" class="result hidden"></div>
-        <div class="actions">
-          <button type="button" class="ghost" data-back="3">Back</button>
-          <button type="button" class="primary" id="ingestBtn">Send to Sentinel</button>
+      </div>
+
+      <div id="workspacePick" class="meta-block hidden"></div>
+      <label class="check"><input type="checkbox" id="dryRun" /> Dry run — write NDJSON locally, do not call Azure</label>
+      <p class="status" id="ingestStatus"></p>
+      <div id="ingestResult" class="result hidden"></div>
+      <div class="actions">
+        <button type="button" class="btn btn-ghost" data-back="3">Back</button>
+        <button type="button" class="btn btn-primary" id="ingestBtn">Send to Sentinel</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="overlay hidden" id="guideOverlay" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+    <div class="guide">
+      <header class="guide-head">
+        <div>
+          <p class="kicker">Setup</p>
+          <h2 id="guideTitle">How to use SentinelLoader</h2>
         </div>
-      </section>
-    </main>
+        <button type="button" class="btn btn-ghost" id="closeGuide">Close</button>
+      </header>
+
+      <div class="guide-body">
+        <section>
+          <h3>What you do in this app</h3>
+          <ol class="steps-ol">
+            <li><strong>Connect</strong> — optional for preview. Required to upload.</li>
+            <li><strong>Files</strong> — bulk-drop CSV / JSON / JSONL.</li>
+            <li><strong>Validate</strong> — check types, map TimeGenerated, inspect sample rows.</li>
+            <li><strong>Send</strong> — create the table here, or point at one you made in Azure.</li>
+          </ol>
+          <p>After a live upload, wait a few minutes, then in Sentinel Logs:</p>
+          <pre>YourTable_CL
+| where TimeGenerated &gt; ago(1d)
+| take 50</pre>
+        </section>
+
+        <section id="guide-app-creates">
+          <h3>Path A — let the app create the table</h3>
+          <p>The Logs Ingestion API will not invent a table at upload time. SentinelLoader can create <code>{Name}_CL</code> and a Direct DCR if this identity can manage the workspace.</p>
+          <ol class="steps-ol">
+            <li>Create an <strong>Entra app registration</strong> (name it SentinelLoader). Add a <strong>client secret</strong> and copy the secret <em>value</em> immediately.</li>
+            <li>Copy Tenant ID, Client ID, Subscription ID, resource group, and Log Analytics workspace name.</li>
+            <li>Grant the app:
+              <ul>
+                <li><strong>Log Analytics Contributor</strong> on the workspace (create the table)</li>
+                <li><strong>Monitoring Contributor</strong> on the resource group (create the DCR)</li>
+                <li><strong>User Access Administrator</strong> on the RG or DCR (so it can grant itself ingest permission)</li>
+              </ul>
+            </li>
+            <li>In this app: choose <em>App creates the table</em>, paste those values, Save &amp; test, then parse and send.</li>
+          </ol>
+          <p>If role assignment fails, grant <strong>Monitoring Metrics Publisher</strong> on the new DCR to the same app, then send again with “Use a table I already created.”</p>
+        </section>
+
+        <section id="guide-portal">
+          <h3>Path B — create the table in Azure, then only paste details here</h3>
+          <p>Use this when a SOC engineer should own the table, or the app identity is not allowed to create resources. When you are done, this app only needs credentials plus three DCR fields.</p>
+
+          <h4>1. Create a service principal</h4>
+          <ol class="steps-ol">
+            <li>Azure portal → <strong>Microsoft Entra ID</strong> → <strong>App registrations</strong> → New registration.</li>
+            <li>Name e.g. <code>SentinelLoader</code>. Single tenant is fine.</li>
+            <li><strong>Certificates &amp; secrets</strong> → New client secret. Copy the <em>Value</em> (not Secret ID).</li>
+            <li>From Overview, copy <strong>Application (client) ID</strong> and <strong>Directory (tenant) ID</strong>.</li>
+          </ol>
+
+          <h4>2. Build a sample JSON (do this in SentinelLoader first)</h4>
+          <ol class="steps-ol">
+            <li>In this app, choose <em>Preview only</em>, drop your CSV, parse, and open Validate.</li>
+            <li>Confirm columns and TimeGenerated.</li>
+            <li>Click <strong>Download sample JSON for Azure portal</strong>. The portal wizard needs a JSON array of example records, not the CSV itself.</li>
+          </ol>
+
+          <h4>3. Create the custom table (DCR-based)</h4>
+          <ol class="steps-ol">
+            <li>Azure portal → <strong>Log Analytics workspaces</strong> → the workspace used by Microsoft Sentinel → <strong>Tables</strong>.</li>
+            <li><strong>Create</strong> → <strong>New custom log (DCR-based)</strong>. Do not use the legacy MMA custom log.</li>
+            <li>Enter a table name. The portal appends <code>_CL</code>. Pick plan Analytics unless you know you need Basic/Auxiliary.</li>
+            <li>Create a <strong>new Data Collection Rule</strong> in the same region as the workspace. If the wizard asks for a <strong>Data Collection Endpoint</strong>, create one (Monitor → Data Collection Endpoints) in that region, or use an existing DCE.</li>
+            <li>Upload the sample JSON you downloaded. If there is no <code>TimeGenerated</code> field, the portal will add a transformation — prefer mapping your timestamp column to TimeGenerated instead.</li>
+            <li>Create. Wait until the table shows as ready (often 1–2 minutes).</li>
+          </ol>
+
+          <h4>4. Grant the app permission to ingest</h4>
+          <ol class="steps-ol">
+            <li>Azure portal → <strong>Monitor</strong> → <strong>Data Collection Rules</strong> → the DCR from the wizard.</li>
+            <li><strong>Access control (IAM)</strong> → Add role assignment.</li>
+            <li>Role: <strong>Monitoring Metrics Publisher</strong>.</li>
+            <li>Assign access to the SentinelLoader app registration (search by name or client ID).</li>
+          </ol>
+
+          <h4>5. Copy the three ingest values</h4>
+          <ol class="steps-ol">
+            <li>DCR → <strong>Overview</strong> → <strong>Immutable Id</strong> (<code>dcr-</code> + hex).</li>
+            <li>DCR → <strong>JSON View</strong> (latest API version) → <code>properties.logsIngestion.endpoint</code>, e.g. <code>https://….ingest.monitor.azure.com</code>.</li>
+            <li>Same JSON → <code>properties.streamDeclarations</code> keys. The stream name is that key, typically <code>Custom-YourTable</code> — not <code>Custom-YourTable_CL</code> unless that is what the JSON actually shows. Match it exactly.</li>
+          </ol>
+
+          <h4>6. What you type into this app</h4>
+          <ul class="value-list">
+            <li>Connect: Tenant ID, Client ID, Client secret, Subscription ID, resource group, workspace name</li>
+            <li>Send → Use a table I already created: table name (<code>_CL</code>), DCR immutable ID, ingestion endpoint, stream name</li>
+          </ul>
+          <p>You do not paste the CSV into Azure. This app still parses files and POSTs them to the Logs Ingestion API.</p>
+        </section>
+      </div>
+    </div>
   </div>
+
   <script src="/app.js"></script>
 </body>
 </html>
